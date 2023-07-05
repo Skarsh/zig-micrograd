@@ -1,17 +1,25 @@
 const std = @import("std");
+const c = @cImport({
+    @cInclude("SDL.h");
+});
+
 const ArrayList = std.ArrayList;
+
+const Ops = enum { add, mul };
 
 const Value = struct {
     data: f32,
     grad: f32 = 0.0,
     prev: ArrayList(Value),
+    op: ?Ops,
 
     pub fn init(data: f32, children: ArrayList(Value)) Value {
-        return Value{ .data = data, .prev = children };
+        return Value{ .data = data, .prev = children, .op = undefined };
     }
 
     pub fn add(self: *Value, other: Value) *Value {
         self.data += other.data;
+        self.op = Ops.add;
         self.prev.append(self.*) catch |err| {
             std.debug.print("add err {}", .{err});
         };
@@ -23,6 +31,7 @@ const Value = struct {
 
     pub fn mul(self: *Value, other: Value) *Value {
         self.data *= other.data;
+        self.op = Ops.mul;
         self.prev.append(self.*) catch |err| {
             std.debug.print("mul err {}", .{err});
         };
@@ -33,7 +42,13 @@ const Value = struct {
     }
 
     pub fn print(self: *Value) void {
-        std.debug.print("data: {}", .{self.data});
+        std.debug.print("data: {}\n", .{self.data});
+    }
+
+    pub fn print_prev(self: *Value) void {
+        for (self.prev.items) |child| {
+            std.debug.print("data: {}\n", .{child.data});
+        }
     }
 };
 
@@ -45,11 +60,14 @@ pub fn main() !void {
     defer a.prev.deinit();
     var b = Value.init(-3.0, ArrayList(Value).init(allocator));
     defer b.prev.deinit();
-    var c = Value.init(10.0, ArrayList(Value).init(allocator));
+    var e = Value.init(10.0, ArrayList(Value).init(allocator));
     defer b.prev.deinit();
 
-    var d = a.mul(b).add(c);
+    var d = a.mul(b).add(e);
+
     d.print();
+    std.debug.print("\n", .{});
+    d.print_prev();
 }
 
 const expect = std.testing.expect;
