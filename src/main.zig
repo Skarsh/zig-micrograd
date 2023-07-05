@@ -1,20 +1,58 @@
 const std = @import("std");
+const ArrayList = std.ArrayList;
+
+const Value = struct {
+    data: f32,
+    grad: f32 = 0.0,
+    prev: ArrayList(Value),
+
+    pub fn init(data: f32, children: ArrayList(Value)) Value {
+        return Value{ .data = data, .prev = children };
+    }
+
+    pub fn add(self: *Value, other: Value) *Value {
+        self.data += other.data;
+        self.prev.append(self.*) catch |err| {
+            std.debug.print("add err {}", .{err});
+        };
+        self.prev.append(other) catch |err| {
+            std.debug.print("add err {}", .{err});
+        };
+        return self;
+    }
+
+    pub fn mul(self: *Value, other: Value) *Value {
+        self.data *= other.data;
+        self.prev.append(self.*) catch |err| {
+            std.debug.print("mul err {}", .{err});
+        };
+        self.prev.append(other) catch |err| {
+            std.debug.print("mul err {}", .{err});
+        };
+        return self;
+    }
+
+    pub fn print(self: *Value) void {
+        std.debug.print("data: {}", .{self.data});
+    }
+};
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    var a = Value.init(2.0, ArrayList(Value).init(allocator));
+    defer a.prev.deinit();
+    var b = Value.init(-3.0, ArrayList(Value).init(allocator));
+    defer b.prev.deinit();
+    var c = Value.init(10.0, ArrayList(Value).init(allocator));
+    defer b.prev.deinit();
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
-
-    try bw.flush(); // don't forget to flush!
+    var d = a.mul(b).add(c);
+    d.print();
 }
+
+const expect = std.testing.expect;
 
 test "simple test" {
     var list = std.ArrayList(i32).init(std.testing.allocator);
