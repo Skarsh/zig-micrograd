@@ -1,7 +1,7 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 
-const Ops = enum { add, mul, pow, relu };
+const Ops = enum { add, mul, pow, relu, neg, sub, div };
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const allocator = gpa.allocator();
@@ -49,6 +49,29 @@ pub const Value = struct {
         var out = if (self.data < 0) Value.init(0.0) else Value.init(self.data);
         out.prev.?[0] = self;
         out.op = Ops.relu;
+        return out;
+    }
+
+    pub fn neg(self: *Value) Value {
+        var out = Value.init(self.data * -1);
+        out.prev.?[0] = self;
+        out.op = Ops.neg;
+        return out;
+    }
+
+    pub fn sub(self: *Value, other: *Value) Value {
+        var out = Value.init(self.data - other.data);
+        out.prev.?[0] = self;
+        out.prev.?[1] = other;
+        out.op = Ops.sub;
+        return out;
+    }
+
+    pub fn div(self: *Value, other: *Value) Value {
+        var out = Value.init(self.data * std.math.pow(f32, other.data, -1));
+        out.prev.?[0] = self;
+        out.prev.?[1] = other;
+        out.op = Ops.div;
         return out;
     }
 
@@ -185,4 +208,65 @@ test "simple relu test less than 0" {
 
     try std.testing.expect(b.op == Ops.relu);
     try std.testing.expect(b.data == 0.0);
+}
+
+test "simple neg test" {
+    var a = Value.init(3.0);
+    try std.testing.expect(a.data == 3.0);
+    var b = a.neg();
+    try std.testing.expect(b.op == Ops.neg);
+    try std.testing.expect(b.data == -3.0);
+}
+
+test "simple double neg test" {
+    var a = Value.init(-3.0);
+    try std.testing.expect(a.data == -3.0);
+    var b = a.neg();
+    try std.testing.expect(b.op == Ops.neg);
+    try std.testing.expect(b.data == 3.0);
+}
+
+test "simple sub test" {
+    var a = Value.init(14.0);
+    var b = Value.init(7.0);
+    var c = a.sub(&b);
+    try std.testing.expect(c.op == Ops.sub);
+    try std.testing.expect(c.data == 7.0);
+}
+
+test "simple sub neg test" {
+    var a = Value.init(7.0);
+    var b = Value.init(14.0);
+    var c = a.sub(&b);
+    try std.testing.expect(c.op == Ops.sub);
+    try std.testing.expect(c.data == -7.0);
+}
+
+test "simple sub double neg test" {
+    var a = Value.init(14.0);
+    var b = Value.init(-7.0);
+    var c = a.sub(&b);
+    try std.testing.expect(c.op == Ops.sub);
+    try std.testing.expect(c.data == 21.0);
+}
+
+test "simple div test" {
+    var a = Value.init(5.0);
+    var b = Value.init(2.0);
+    var c = a.div(&b);
+    try std.testing.expect(c.data == 2.5);
+}
+
+test "simple div neg test" {
+    var a = Value.init(5.0);
+    var b = Value.init(-2.0);
+    var c = a.div(&b);
+    try std.testing.expect(c.data == -2.5);
+}
+
+test "simple div less than 0 test" {
+    var a = Value.init(5.0);
+    var b = Value.init(0.5);
+    var c = a.div(&b);
+    try std.testing.expect(c.data == 10);
 }
