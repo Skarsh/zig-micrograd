@@ -3,71 +3,53 @@ const c = @cImport({
     @cInclude("SDL.h");
 });
 
+const Value = @import("value.zig").Value;
+
 const ArrayList = std.ArrayList;
 
-const Ops = enum { add, mul };
-
-const Value = struct {
-    data: f32,
-    grad: f32 = 0.0,
-    prev: ArrayList(Value),
-    op: ?Ops,
-
-    pub fn init(data: f32, children: ArrayList(Value)) Value {
-        return Value{ .data = data, .prev = children, .op = undefined };
-    }
-
-    pub fn add(self: *Value, other: Value) *Value {
-        self.data += other.data;
-        self.op = Ops.add;
-        self.prev.append(self.*) catch |err| {
-            std.debug.print("add err {}", .{err});
-        };
-        self.prev.append(other) catch |err| {
-            std.debug.print("add err {}", .{err});
-        };
-        return self;
-    }
-
-    pub fn mul(self: *Value, other: Value) *Value {
-        self.data *= other.data;
-        self.op = Ops.mul;
-        self.prev.append(self.*) catch |err| {
-            std.debug.print("mul err {}", .{err});
-        };
-        self.prev.append(other) catch |err| {
-            std.debug.print("mul err {}", .{err});
-        };
-        return self;
-    }
-
-    pub fn print(self: *Value) void {
-        std.debug.print("data: {}\n", .{self.data});
-    }
-
-    pub fn print_prev(self: *Value) void {
-        for (self.prev.items) |child| {
-            std.debug.print("data: {}\n", .{child.data});
-        }
-    }
-};
+var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+const allocator = gpa.allocator();
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
+    _ = c.SDL_Init(c.SDL_INIT_VIDEO);
+    defer c.SDL_Quit();
 
-    var a = Value.init(2.0, ArrayList(Value).init(allocator));
-    defer a.prev.deinit();
-    var b = Value.init(-3.0, ArrayList(Value).init(allocator));
-    defer b.prev.deinit();
-    var e = Value.init(10.0, ArrayList(Value).init(allocator));
-    defer b.prev.deinit();
+    var window = c.SDL_CreateWindow("zig micrograd", c.SDL_WINDOWPOS_CENTERED, c.SDL_WINDOWPOS_CENTERED, 640, 400, 0);
+    defer c.SDL_DestroyWindow(window);
 
-    var d = a.mul(b).add(e);
+    var renderer = c.SDL_CreateRenderer(window, 0, c.SDL_RENDERER_PRESENTVSYNC);
+    defer c.SDL_DestroyRenderer(renderer);
 
-    d.print();
-    std.debug.print("\n", .{});
-    d.print_prev();
+    mainloop: while (true) {
+        var sdl_event: c.SDL_Event = undefined;
+        while (c.SDL_PollEvent(&sdl_event) != 0) {
+            switch (sdl_event.type) {
+                c.SDL_QUIT => break :mainloop,
+                else => {},
+            }
+        }
+
+        _ = c.SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
+        _ = c.SDL_RenderClear(renderer);
+        var rect = c.SDL_Rect{ .x = 0, .y = 0, .w = 60, .h = 60 };
+        const a = 0.001 * @as(f32, @floatFromInt(c.SDL_GetTicks()));
+        const t = 2 * std.math.pi / 3.0;
+        const r = 100 * @cos(0.1 * a);
+        rect.x = 290 + @as(i32, @intFromFloat(r * @cos(a)));
+        rect.y = 170 + @as(i32, @intFromFloat(r * @sin(a)));
+        _ = c.SDL_SetRenderDrawColor(renderer, 0xff, 0, 0, 0xff);
+        _ = c.SDL_RenderFillRect(renderer, &rect);
+        rect.x = 290 + @as(i32, @intFromFloat(r * @cos(a + t)));
+        rect.y = 170 + @as(i32, @intFromFloat(r * @sin(a + t)));
+        _ = c.SDL_SetRenderDrawColor(renderer, 0, 0xff, 0, 0xff);
+        _ = c.SDL_RenderFillRect(renderer, &rect);
+        rect.x = 290 + @as(i32, @intFromFloat(r * @cos(a + 2 * t)));
+        rect.y = 170 + @as(i32, @intFromFloat(r * @sin(a + 2 * t)));
+        _ = c.SDL_SetRenderDrawColor(renderer, 0, 0, 0xff, 0xff);
+        _ = c.SDL_RenderFillRect(renderer, &rect);
+
+        c.SDL_RenderPresent(renderer);
+    }
 }
 
 const expect = std.testing.expect;
