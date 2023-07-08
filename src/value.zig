@@ -12,18 +12,17 @@ pub const Value = struct {
     prev: ?[2]?*Value,
     op: ?Ops,
 
-    pub fn init(data: f32) !Value {
-        var children = try allocator.create([2]?*Value);
+    pub fn init(data: f32) Value {
+        var children = allocator.create([2]?*Value) catch |err| {
+            std.debug.panic("Error: {}", .{err});
+        };
         children[0] = null;
         children[1] = null;
         return Value{ .data = data, .prev = children.*, .op = null };
     }
 
     pub fn add(self: *Value, other: *Value) Value {
-        var out = Value.init(self.data + other.data) catch |err| {
-            std.debug.print("add err {}", .{err});
-            return Value{ .data = 0.0, .prev = null, .op = null };
-        };
+        var out = Value.init(self.data + other.data);
         out.prev.?[0] = self;
         out.prev.?[1] = other;
         out.op = Ops.add;
@@ -31,10 +30,7 @@ pub const Value = struct {
     }
 
     pub fn mul(self: *Value, other: *Value) Value {
-        var out = Value.init(self.data * other.data) catch |err| {
-            std.debug.print("mul err {}", .{err});
-            return Value{ .data = 0.0, .prev = null, .op = null };
-        };
+        var out = Value.init(self.data * other.data);
         out.prev.?[0] = self;
         out.prev.?[1] = other;
         out.op = Ops.mul;
@@ -42,10 +38,7 @@ pub const Value = struct {
     }
 
     pub fn pow(self: *Value, other: *Value) Value {
-        var out = Value.init(std.math.pow(f32, self.data, other.data)) catch |err| {
-            std.debug.print("mul err {}", .{err});
-            return Value{ .data = 0.0, .prev = null, .op = null };
-        };
+        var out = Value.init(std.math.pow(f32, self.data, other.data));
         out.prev.?[0] = self;
         out.prev.?[1] = other;
         out.op = Ops.pow;
@@ -53,13 +46,7 @@ pub const Value = struct {
     }
 
     pub fn relu(self: *Value) Value {
-        var out = if (self.data < 0) Value.init(0.0) catch |err| {
-            std.debug.print("mul err {}", .{err});
-            return Value{ .data = 0.0, .prev = null, .op = null };
-        } else Value.init(self.data) catch |err| {
-            std.debug.print("mul err {}", .{err});
-            return Value{ .data = 0.0, .prev = null, .op = null };
-        };
+        var out = if (self.data < 0) Value.init(0.0) else Value.init(self.data);
         out.prev.?[0] = self;
         out.op = Ops.relu;
         return out;
@@ -81,10 +68,10 @@ pub const Value = struct {
 };
 
 test "simple add test" {
-    var a = try Value.init(3.0);
+    var a = Value.init(3.0);
     try std.testing.expect(a.op == null);
     try std.testing.expect(a.data == 3.0);
-    var b = try Value.init(2.0);
+    var b = Value.init(2.0);
     try std.testing.expect(b.op == null);
     try std.testing.expect(b.data == 2.0);
 
@@ -96,10 +83,10 @@ test "simple add test" {
 }
 
 test "simple add test one neg" {
-    var a = try Value.init(2.0);
+    var a = Value.init(2.0);
     try std.testing.expect(a.op == null);
     try std.testing.expect(a.data == 2.0);
-    var b = try Value.init(-3.0);
+    var b = Value.init(-3.0);
     try std.testing.expect(b.op == null);
     try std.testing.expect(b.data == -3.0);
 
@@ -111,9 +98,9 @@ test "simple add test one neg" {
 }
 
 test "simple add test two neg" {
-    var a = try Value.init(-2.0);
+    var a = Value.init(-2.0);
     try std.testing.expect(a.data == -2.0);
-    var b = try Value.init(-3.0);
+    var b = Value.init(-3.0);
     try std.testing.expect(b.data == -3.0);
 
     var c = a.add(&b);
@@ -124,9 +111,9 @@ test "simple add test two neg" {
 }
 
 test "simple mul test" {
-    var a = try Value.init(3.0);
+    var a = Value.init(3.0);
     try std.testing.expect(a.data == 3.0);
-    var b = try Value.init(2.0);
+    var b = Value.init(2.0);
     try std.testing.expect(b.data == 2.0);
 
     var c = a.mul(&b);
@@ -137,9 +124,9 @@ test "simple mul test" {
 }
 
 test "simple mul test one neg" {
-    var a = try Value.init(-3.0);
+    var a = Value.init(-3.0);
     try std.testing.expect(a.data == -3.0);
-    var b = try Value.init(2.0);
+    var b = Value.init(2.0);
     try std.testing.expect(b.data == 2.0);
 
     var c = a.mul(&b);
@@ -150,9 +137,9 @@ test "simple mul test one neg" {
 }
 
 test "simple mul test two neg" {
-    var a = try Value.init(-3.0);
+    var a = Value.init(-3.0);
     try std.testing.expect(a.data == -3.0);
-    var b = try Value.init(-2.0);
+    var b = Value.init(-2.0);
     try std.testing.expect(b.data == -2.0);
 
     var c = a.mul(&b);
@@ -163,8 +150,8 @@ test "simple mul test two neg" {
 }
 
 test "simple pow test" {
-    var a = try Value.init(2.0);
-    var b = try Value.init(2.0);
+    var a = Value.init(2.0);
+    var b = Value.init(2.0);
 
     var c = a.pow(&b);
 
@@ -173,8 +160,8 @@ test "simple pow test" {
 }
 
 test "simple pow test neg" {
-    var a = try Value.init(2.0);
-    var b = try Value.init(-1.0);
+    var a = Value.init(2.0);
+    var b = Value.init(-1.0);
 
     var c = a.pow(&b);
 
@@ -183,7 +170,7 @@ test "simple pow test neg" {
 }
 
 test "simple relu test larger than 0" {
-    var a = try Value.init(2.0);
+    var a = Value.init(2.0);
     var b = a.relu();
 
     try std.testing.expect(b.op == Ops.relu);
@@ -191,7 +178,7 @@ test "simple relu test larger than 0" {
 }
 
 test "simple relu test less than 0" {
-    var a = try Value.init(-2.0);
+    var a = Value.init(-2.0);
     try std.testing.expect(a.op == null);
     try std.testing.expect(a.data == -2.0);
     var b = a.relu();
