@@ -24,6 +24,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    exe.addIncludePath(".\\lib\\SDL2-2.28.1\\include");
+    exe.addLibraryPath(".\\lib\\SDL2-2.28.1\\lib\\x64");
+    b.installBinFile(".\\lib\\SDL2-2.28.1\\" ++ "lib\\x64\\SDL2.dll", "SDL2.dll");
+    exe.linkSystemLibrary("SDL2");
+    exe.linkLibC();
+
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
@@ -62,9 +68,18 @@ pub fn build(b: *std.Build) void {
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
 
+    const value_unit_tests = b.addTest(.{
+        .root_source_file = .{ .path = "src/value.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const run_value_unit_tests = b.addRunArtifact(value_unit_tests);
+
     // Similar to creating the run step earlier, this exposes a `test` step to
     // the `zig build --help` menu, providing a way for the user to request
     // running the unit tests.
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_unit_tests.step);
+    test_step.dependOn(&run_value_unit_tests.step);
 }
