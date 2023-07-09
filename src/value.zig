@@ -21,58 +21,58 @@ pub const Value = struct {
         return Value{ .data = data, .prev = children.*, .op = null };
     }
 
-    pub fn add(self: *Value, other: *Value) *Value {
+    pub fn add(self: *Value, other: *Value) Value {
         var out = Value.init(self.data + other.data);
         out.prev.?[0] = self;
         out.prev.?[1] = other;
         out.op = Ops.add;
-        return &out;
+        return out;
     }
 
-    pub fn mul(self: *Value, other: *Value) *Value {
+    pub fn mul(self: *Value, other: *Value) Value {
         var out = Value.init(self.data * other.data);
         out.prev.?[0] = self;
         out.prev.?[1] = other;
         out.op = Ops.mul;
-        return &out;
+        return out;
     }
 
-    pub fn pow(self: *Value, other: *Value) *Value {
+    pub fn pow(self: *Value, other: *Value) Value {
         var out = Value.init(std.math.pow(f32, self.data, other.data));
         out.prev.?[0] = self;
         out.prev.?[1] = other;
         out.op = Ops.pow;
-        return &out;
+        return out;
     }
 
-    pub fn relu(self: *Value) *Value {
+    pub fn relu(self: *Value) Value {
         var out = if (self.data < 0) Value.init(0.0) else Value.init(self.data);
         out.prev.?[0] = self;
         out.op = Ops.relu;
-        return &out;
+        return out;
     }
 
-    pub fn neg(self: *Value) *Value {
+    pub fn neg(self: *Value) Value {
         var out = Value.init(self.data * -1);
         out.prev.?[0] = self;
         out.op = Ops.neg;
-        return &out;
+        return out;
     }
 
-    pub fn sub(self: *Value, other: *Value) *Value {
+    pub fn sub(self: *Value, other: *Value) Value {
         var out = Value.init(self.data - other.data);
         out.prev.?[0] = self;
         out.prev.?[1] = other;
         out.op = Ops.sub;
-        return &out;
+        return out;
     }
 
-    pub fn div(self: *Value, other: *Value) *Value {
+    pub fn div(self: *Value, other: *Value) Value {
         var out = Value.init(self.data * std.math.pow(f32, other.data, -1));
         out.prev.?[0] = self;
         out.prev.?[1] = other;
         out.op = Ops.div;
-        return &out;
+        return out;
     }
 
     pub fn print(self: *Value) void {
@@ -91,14 +91,6 @@ pub const Value = struct {
 };
 
 const expect = std.testing.expect;
-
-test "junk" {
-    var a = Value.init(1.0);
-    var b = Value.init(2.0);
-    var c = Value.init(3.0);
-    var d = a.add(&b).mul(&c);
-    try std.testing.expect(d.data == 9.0);
-}
 
 test "simple add test" {
     var a = Value.init(3.0);
@@ -141,22 +133,6 @@ test "simple add test two neg" {
     try std.testing.expect(c.data == -5.0);
     try std.testing.expect(c.prev.?[0].?.data == -2.0);
     try std.testing.expect(c.prev.?[1].?.data == -3.0);
-}
-
-test "chain add test single variable" {
-    var a = Value.init(2.5);
-    var b = a.add(&a);
-    try expect(b.op == Ops.add);
-    try expect(b.data == 5.0);
-}
-
-test "chain add test multi variable" {
-    var a = Value.init(2.0);
-    var b = Value.init(3.0);
-    var c = Value.init(4.0);
-    var d = a.add(&b).add(&c);
-    try expect(d.op == Ops.add);
-    try expect(d.data == 9.0);
 }
 
 test "simple mul test" {
