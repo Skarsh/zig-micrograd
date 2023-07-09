@@ -103,7 +103,11 @@ test "simple add test" {
     var c = a.add(&b);
     try std.testing.expect(c.op == Ops.add);
     try std.testing.expect(c.data == 5.0);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
     try std.testing.expect(c.prev.?[0].?.data == 3.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
     try std.testing.expect(c.prev.?[1].?.data == 2.0);
 }
 
@@ -118,7 +122,11 @@ test "simple add test one neg" {
     var c = a.add(&b);
     try std.testing.expect(c.op == Ops.add);
     try std.testing.expect(c.data == -1.0);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
     try std.testing.expect(c.prev.?[0].?.data == 2.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
     try std.testing.expect(c.prev.?[1].?.data == -3.0);
 }
 
@@ -131,7 +139,11 @@ test "simple add test two neg" {
     var c = a.add(&b);
     try std.testing.expect(c.op == Ops.add);
     try std.testing.expect(c.data == -5.0);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
     try std.testing.expect(c.prev.?[0].?.data == -2.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
     try std.testing.expect(c.prev.?[1].?.data == -3.0);
 }
 
@@ -144,7 +156,11 @@ test "simple mul test" {
     var c = a.mul(&b);
     try std.testing.expect(c.op == Ops.mul);
     try std.testing.expect(c.data == 6.0);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
     try std.testing.expect(c.prev.?[0].?.data == 3.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
     try std.testing.expect(c.prev.?[1].?.data == 2.0);
 }
 
@@ -157,7 +173,11 @@ test "simple mul test one neg" {
     var c = a.mul(&b);
     try std.testing.expect(c.op == Ops.mul);
     try std.testing.expect(c.data == -6.0);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
     try std.testing.expect(c.prev.?[0].?.data == -3.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
     try std.testing.expect(c.prev.?[1].?.data == 2.0);
 }
 
@@ -170,7 +190,11 @@ test "simple mul test two neg" {
     var c = a.mul(&b);
     try std.testing.expect(c.op == Ops.mul);
     try std.testing.expect(c.data == 6.0);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
     try std.testing.expect(c.prev.?[0].?.data == -3.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
     try std.testing.expect(c.prev.?[1].?.data == -2.0);
 }
 
@@ -182,6 +206,12 @@ test "simple pow test" {
 
     try std.testing.expect(c.op == Ops.pow);
     try std.testing.expect(c.data == 4.0);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
+    try std.testing.expect(c.prev.?[0].?.data == 2.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
+    try std.testing.expect(c.prev.?[1].?.data == 2.0);
 }
 
 test "simple pow test neg" {
@@ -192,6 +222,12 @@ test "simple pow test neg" {
 
     try std.testing.expect(c.op == Ops.pow);
     try std.testing.expect(c.data == 0.5);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
+    try std.testing.expect(c.prev.?[0].?.data == 2.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
+    try std.testing.expect(c.prev.?[1].?.data == -1.0);
 }
 
 test "simple relu test larger than 0" {
@@ -200,6 +236,11 @@ test "simple relu test larger than 0" {
 
     try std.testing.expect(b.op == Ops.relu);
     try std.testing.expect(b.data == 2.0);
+
+    try std.testing.expect(b.prev.?[0].?.op == null);
+    try std.testing.expect(b.prev.?[0].?.data == 2.0);
+
+    try std.testing.expect(b.prev.?[1] == null);
 }
 
 test "simple relu test less than 0" {
@@ -210,6 +251,11 @@ test "simple relu test less than 0" {
 
     try std.testing.expect(b.op == Ops.relu);
     try std.testing.expect(b.data == 0.0);
+
+    try std.testing.expect(b.prev.?[0].?.op == null);
+    try std.testing.expect(b.prev.?[0].?.data == -2.0);
+
+    try std.testing.expect(b.prev.?[1] == null);
 }
 
 test "simple neg test" {
@@ -218,6 +264,11 @@ test "simple neg test" {
     var b = a.neg();
     try std.testing.expect(b.op == Ops.neg);
     try std.testing.expect(b.data == -3.0);
+
+    try std.testing.expect(b.prev.?[0].?.op == null);
+    try std.testing.expect(b.prev.?[0].?.data == 3.0);
+
+    try std.testing.expect(b.prev.?[1] == null);
 }
 
 test "simple double neg test" {
@@ -226,6 +277,11 @@ test "simple double neg test" {
     var b = a.neg();
     try std.testing.expect(b.op == Ops.neg);
     try std.testing.expect(b.data == 3.0);
+
+    try std.testing.expect(b.prev.?[0].?.op == null);
+    try std.testing.expect(b.prev.?[0].?.data == -3.0);
+
+    try std.testing.expect(b.prev.?[1] == null);
 }
 
 test "simple sub test" {
@@ -234,6 +290,12 @@ test "simple sub test" {
     var c = a.sub(&b);
     try std.testing.expect(c.op == Ops.sub);
     try std.testing.expect(c.data == 7.0);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
+    try std.testing.expect(c.prev.?[0].?.data == 14.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
+    try std.testing.expect(c.prev.?[1].?.data == 7.0);
 }
 
 test "simple sub neg test" {
@@ -242,6 +304,12 @@ test "simple sub neg test" {
     var c = a.sub(&b);
     try std.testing.expect(c.op == Ops.sub);
     try std.testing.expect(c.data == -7.0);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
+    try std.testing.expect(c.prev.?[0].?.data == 7.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
+    try std.testing.expect(c.prev.?[1].?.data == 14.0);
 }
 
 test "simple sub double neg test" {
@@ -250,6 +318,12 @@ test "simple sub double neg test" {
     var c = a.sub(&b);
     try std.testing.expect(c.op == Ops.sub);
     try std.testing.expect(c.data == 21.0);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
+    try std.testing.expect(c.prev.?[0].?.data == 14.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
+    try std.testing.expect(c.prev.?[1].?.data == -7.0);
 }
 
 test "simple div test" {
@@ -257,6 +331,12 @@ test "simple div test" {
     var b = Value.init(2.0);
     var c = a.div(&b);
     try std.testing.expect(c.data == 2.5);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
+    try std.testing.expect(c.prev.?[0].?.data == 5.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
+    try std.testing.expect(c.prev.?[1].?.data == 2.0);
 }
 
 test "simple div neg test" {
@@ -264,6 +344,12 @@ test "simple div neg test" {
     var b = Value.init(-2.0);
     var c = a.div(&b);
     try std.testing.expect(c.data == -2.5);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
+    try std.testing.expect(c.prev.?[0].?.data == 5.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
+    try std.testing.expect(c.prev.?[1].?.data == -2.0);
 }
 
 test "simple div less than 0 test" {
@@ -271,4 +357,19 @@ test "simple div less than 0 test" {
     var b = Value.init(0.5);
     var c = a.div(&b);
     try std.testing.expect(c.data == 10);
+
+    try std.testing.expect(c.prev.?[0].?.op == null);
+    try std.testing.expect(c.prev.?[0].?.data == 5.0);
+
+    try std.testing.expect(c.prev.?[1].?.op == null);
+    try std.testing.expect(c.prev.?[1].?.data == 0.5);
+}
+
+test "long multi op test" {
+    var a = Value.init(5.0);
+    var b = Value.init(0.5);
+    var c = a.add(&b);
+    var d = a.add(&b);
+    var e = d.mul(&c);
+    try expect(e.data == 30.25);
 }
