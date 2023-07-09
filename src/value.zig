@@ -13,6 +13,7 @@ pub const Value = struct {
     op: ?Ops,
 
     pub fn init(data: f32) Value {
+        // TODO: Look into another way of allocating and deinit function for freeing memory
         var children = allocator.create([2]?*Value) catch |err| {
             std.debug.panic("Error: {}", .{err});
         };
@@ -29,12 +30,22 @@ pub const Value = struct {
         return out;
     }
 
+    fn backwardAdd(self: *Value) void {
+        self.prev.?[0].?.grad += self.grad;
+        self.prev.?[1].?.grad += self.grad;
+    }
+
     pub fn mul(self: *Value, other: *Value) Value {
         var out = Value.init(self.data * other.data);
         out.prev.?[0] = self;
         out.prev.?[1] = other;
         out.op = Ops.mul;
         return out;
+    }
+
+    fn backwardMul(self: *Value) void {
+        self.prev.?[0].?.grad += self.prev.?[1].?.data * self.grad;
+        self.prev.?[1].?.grad += self.prev.?[0].?.data * self.grad;
     }
 
     pub fn pow(self: *Value, other: *Value) Value {
@@ -45,6 +56,10 @@ pub const Value = struct {
         return out;
     }
 
+    fn backwardPow(self: *Value) void {
+        self.prev.?[0].?.grad += self.prev.?[1].?.data * std.math.pow(f32, self.prev.?[0].?.data, self.prev.?[1].?.data) * self.grad;
+    }
+
     pub fn relu(self: *Value) Value {
         var out = if (self.data < 0) Value.init(0.0) else Value.init(self.data);
         out.prev.?[0] = self;
@@ -52,11 +67,19 @@ pub const Value = struct {
         return out;
     }
 
+    fn backwardRelu(self: *Value) void {
+        self.prev.?[0].?.grad += if (self.data > 0.0) self.grad else 0;
+    }
+
     pub fn neg(self: *Value) Value {
         var out = Value.init(self.data * -1);
         out.prev.?[0] = self;
         out.op = Ops.neg;
         return out;
+    }
+
+    fn backwardNeg(self: *Value) void {
+        self.prev.?[0].?.grad -= self.grad;
     }
 
     pub fn sub(self: *Value, other: *Value) Value {
@@ -67,6 +90,11 @@ pub const Value = struct {
         return out;
     }
 
+    fn backwardSub(self: *Value) void {
+        self.prev.?[0].?.grad += self.grad;
+        self.prev.?[1].?.grad -= self.grad;
+    }
+
     pub fn div(self: *Value, other: *Value) Value {
         var out = Value.init(self.data * std.math.pow(f32, other.data, -1));
         out.prev.?[0] = self;
@@ -75,9 +103,16 @@ pub const Value = struct {
         return out;
     }
 
+    fn backwardDiv(self: *Value) void {
+        const b: f32 = self.prev.?[1].?.data;
+        self.prev.?[0].?.grad += (1.0 / b) * self.grad;
+        self.prev.?[1].?.grad -= (self.prev.?[0].?.data / (b * b)) * self.grad;
+    }
+
     pub fn print(self: *Value) void {
         std.debug.print("data: {}\n", .{self.data});
         std.debug.print("op: {?}\n", .{self.op});
+        std.debug.print("grad: {}\n", .{self.grad});
     }
 
     pub fn printPrev(self: *Value) void {
@@ -88,9 +123,103 @@ pub const Value = struct {
                 self.prev.?[1].?.print();
         }
     }
+
+    pub fn backward(self: *Value) void {
+        var topo = ArrayList(Value).init(allocator);
+        var visited = ArrayList(Value).init(allocator);
+        buildTopo(&topo, &visited, self.*);
+        self.grad = 1.0;
+
+        var i = topo.items.len;
+        while (i > 0) : (i -= 1) {
+            if (self.op != null) {
+                switch (self.op.?) {
+                    Ops.add => {
+                        self.backwardAdd();
+                    },
+                    Ops.sub => {
+                        self.backwardSub();
+                    },
+                    Ops.mul => {
+                        self.backwardMul();
+                    },
+                    Ops.div => {
+                        self.backwardMul();
+                    },
+                    Ops.pow => {
+                        self.backwardPow();
+                    },
+                    Ops.neg => {
+                        self.backwardNeg();
+                    },
+                    Ops.relu => {
+                        self.backwardNeg();
+                    },
+                }
+            }
+        }
+    }
+
+    pub fn buildTopo(topo: *ArrayList(Value), visited: *ArrayList(Value), value: Value) void {
+        if (!contains(visited.*, value)) {
+            visited.*.append(value) catch |err| {
+                std.debug.panic("Error when appending to visited list in buildTopo: {}", .{err});
+            };
+            if (value.prev != null) {
+                for (value.prev.?) |child| {
+                    if (child != null) {
+                        buildTopo(topo, visited, child.?.*);
+                    }
+                }
+            }
+            topo.append(value) catch |err| {
+                std.debug.panic("Error when appending to topo list in buildTopo: {}", .{err});
+            };
+        }
+    }
 };
 
+fn contains(list: ArrayList(Value), val: Value) bool {
+    var exists = false;
+    for (list.items) |value| {
+        // TODO: This is not ideal, this will not follow pointers
+        if (std.meta.eql(val, value)) {
+            exists = true;
+        }
+    }
+    return exists;
+}
+
 const expect = std.testing.expect;
+
+test "backward" {
+    var a = Value.init(3.0);
+    var b = Value.init(4.0);
+    var c = a.add(&b);
+    c.backward();
+    c.print();
+    c.printPrev();
+}
+
+test "contains test" {
+    var someList = ArrayList(Value).init(std.testing.allocator);
+    defer someList.deinit();
+    var a = Value.init(2.0);
+    var b = Value.init(3.0);
+    var c = a.add(&b);
+    var d = Value.init(4.0);
+    var e = c.mul(&d);
+    try someList.append(a);
+    try someList.append(b);
+    try someList.append(c);
+    try someList.append(e);
+
+    try expect(contains(someList, a));
+    try expect(contains(someList, b));
+    try expect(contains(someList, c));
+    try expect(!contains(someList, d));
+    try expect(contains(someList, e));
+}
 
 test "simple add test" {
     var a = Value.init(3.0);
