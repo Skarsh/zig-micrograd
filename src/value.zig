@@ -80,7 +80,7 @@ pub const Value = struct {
         std.debug.print("op: {?}\n", .{self.op});
     }
 
-    pub fn print_prev(self: *Value) void {
+    pub fn printPrev(self: *Value) void {
         if (self.prev != null) {
             if (self.prev.?[0] != null)
                 self.prev.?[0].?.print();
